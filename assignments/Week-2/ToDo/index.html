@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<title>JavaScript MVC App: ToDo List w/ localStorage</title>
+<script type="text/javascript" src="scripts/json2.js"></script>
+<script type="text/javascript" src="scripts/jquery-1.6.2.min.js"></script>
+<script type="text/javascript" src="scripts/underscore-1.1.6.js"></script>
+<script type="text/javascript" src="scripts/backbone.js"></script>
+<script type="text/javascript" src="scripts/backbone-localstorage.js"></script>
+<script type="text/javascript">
+$(document).ready(function(){
+	// Model: New Task
+	window.Task = Backbone.Model.extend({
+		defaults: {
+			content: 'New Task',
+			done: false
+		},
+		initialize: function(){
+			if(!this.get('content')){
+				this.set({'content': this.defaults.content});
+			}
+		},
+		toggle: function(){
+			this.save({done: !this.get('done')});
+		},
+		clear: function(){
+			this.destroy();
+			this.view.remove();
+		}
+	});
+	
+	// Collection: Task List
+	window.TaskList = Backbone.Collection.extend({
+		model: Task,
+		localStorage: new Store('todos'),
+		done: function(){
+			return this.filter(function(task){ return task.get('done'); });
+		},
+		remaining: function(){
+			return this.without.apply(this, this.done());
+		},
+		nextOrder: function(){
+			if(!this.length) return 1;
+			return this.last().get('order') + 1;
+		},
+		comparator: function(task){
+			return task.get('order');
+		}
+	});
+	
+	// Create global collection of tasks
+	window.Tasks = new TaskList;
+	
+	// View: Task List Item
+	window.TaskView = Backbone.View.extend({
+		tagName: 'li',
+		template: _.template($('#item-template').html()),
+		events:
+		{
+			'click .check'				: 'toggleDone',
+			'dblclick div.task-content'	: 'edit',
+			'click span.task-destroy'	: 'clear',
+			'keypress .todo-input'		: 'updateOnEnter'
+		},
+		initialize: function(){
+			this.model.bind('change', this.render, this);
+			this.model.view = this;
+		},
+		render: function(){
+			$(this.el).html(this.template(this.model.toJSON()));
+			return this;
+		},
+		setContent: function(){
+			var content = this.model.get('content');
+			this.$('.todo-content').text(content);
+			this.input = this.$('.todo-input');
+			this.input.bind('blur', _.bind(this.close, this));
+			this.input.val(content);
+		},
+		toggleDone: function(){
+			this.model.toggle();
+		},
+		edit: function(){
+			$(this.el).addClass('editing');
+			this.input.focus();
+		},
+		close: function(){
+			this.model.save({content: this.input.val()});
+			$(this.el).removeClass('editing');
+		},
+		updateOnEnter: function(e){
+			if(e.keyCode == 13) this.close();
+		},
+		remove: function(){
+			$(this.el).remove();
+		},
+		clear: function(){
+			this.model.clear();
+		}
+	});
+	
+	// View: The App
+	window.AppView = Backbone.View.extend({
+		el: $('#todoapp'),
+		statsTemplate: _.template($('#stats-template').html()),
+		events: {
+			'keypress #new-todo'	: 'createOnEnter',
+			'keyup #new-todo'		: 'showToolTip',
+			'click .todo-clear'		: 'clearCompleted'
+		},
+		initialize: function(){
+			this.input = this.$('#new-todo');
+			
+			Tasks.bind('add',	this.addOne, this);
+			Tasks.bind('reset',	this.addAll, this);
+			Tasks.bind('all',	this.render, this);
+			
+			Tasks.fetch();
+		},
+		render: function(){
+			this.$('#todo-stats').html(this.statsTemplate({
+				total:		Tasks.length,
+				done:		Tasks.done().length,
+				remaining:	Tasks.remaining().length
+			}));
+		},
+		addOne: function(task){
+			var view = new TaskView({model: task});
+			this.$("#todo-list").append(view.render().el);
+		},
+		addAll: function(){
+			Tasks.each(this.addOne);
+		},
+		newAttributes: function(){
+			return {
+				content:	this.input.val(),
+				order:		Tasks.nextOrder(),
+				done:		false
+			};
+		},
+		createOnEnter: function(e){
+			if (e.keyCode != 13) return;
+			Tasks.create(this.newAttributes());
+			this.input.val('');
+		},
+		clearCompleted: function(){
+			_.each(Tasks.done(), function(task){ task.clear(); });
+		},
+		showToolTip: function(e){
+			var tooltip = this.$('.ui-tooltip-top');
+			var val = this.input.val();
+			tooltip.fadeOut();
+			if (this.tooltipTimeout) clearTimeout(this.tooltipTimeout);
+			if (val == '' || val == this.input.attr('placeholder')) return;
+			var show = function(){
+				tooltip.show().fadeIn(); 
+			};
+			this.tooltipTimeout = _.delay(show, 1000);
+		}
+	});
+
+	window.App = new AppView;
+
+});
+</script>
+<style type="text/css">
+body {
+	font-family:Arial, sans-serif;
+	font-size:14px;
+}
+
+h1 {
+	font-size:24px;
+	color:#099FF;
+	margin-bottom:10px;
+}
+</style>
+</head>
+<body>
+    <div id="todoapp">
+
+      <div class="title">
+        <h1>Task List</h1>
+		<p>Add items to your ToDo list below:</p>
+      </div>
+
+      <div class="content">
+
+		<div id="create-todo">
+
+          <input id="new-todo" placeholder="What needs to be done?" type="text" />
+          <span class="ui-tooltip-top" style="display:none;">Press Enter to save this task</span>
+        </div>
+
+        <div id="todos">
+          <ul id="todo-list"></ul>
+        </div>
+
+        <div id="todo-stats"></div>
+
+      </div>
+
+    </div>
+
+    <script type="text/template" id="item-template">
+      <div class="todo <%= done ? 'done' : '' %>">
+        <div class="display">
+          <input class="check" type="checkbox" <%= done ? 'checked="checked"' : '' %> />
+          <div class="todo-content"></div>
+          <span class="todo-destroy"></span>
+        </div>
+        <div class="edit">
+          <input class="todo-input" type="text" value="" />
+        </div>
+      </div>
+    </script>
+
+    <script type="text/template" id="stats-template">
+      <% if (total) { %>
+        <span class="todo-count">
+          <span class="number"><%= remaining %></span>
+          <span class="word"><%= remaining == 1 ? 'item' : 'items' %></span> left.
+        </span>
+      <% } %>
+      <% if (done) { %>
+        <span class="todo-clear">
+          <a href="#">
+            Clear <span class="number-done"><%= done %></span>
+            completed <span class="word-done"><%= done == 1 ? 'item' : 'items' %></span>
+          </a>
+        </span>
+      <% } %>
+    </script>
+</body>
+</html>
