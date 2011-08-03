@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<title>HTML5 Canvas | Drawing</title>
+<script src="jquery-1.6.2.min.js"></script>
+<style>
+body {
+	background:grey;
+	text-align:center;
+	color:#333;
+	font-family:Impact, Charcoal, sans-serif;
+}
+
+#stage {
+	margin:0 auto;
+	border:1px solid black;
+	display:block;
+	background:#FFF;
+	-moz-box-shadow: 10px 10px 5px #555;
+}
+
+#line {
+	margin-top:15px;
+	font-size:18px;
+	letter-spacing:3px;
+}
+
+.button {
+	margin-top:5px;
+}
+</style>
+<script>
+$(function(){
+	var stage = document.getElementById('stage');
+    var ctx = stage.getContext('2d');
+
+	// Set the color
+	var color = 'black';
+	$('.color').click(function(){
+		color = $(this).attr('data-color');
+		$('#whatColor').html(color).css('color', color);
+		$('#whatWidth').css('color', color);
+	});
+	
+	$('#whatColor').html(color).css('color', color);
+	$('#whatWidth').css('color', color);
+	
+	// Set the width
+	var width = 1;
+	$('.width').click(function(){
+		width = $(this).attr('data-width');
+		$('#whatWidth').html(width+'px');
+	});
+	
+	$('#whatWidth').html(width+'px');
+	
+	// Here we draw our lines
+	stage.onmousedown = function(event) {
+		var x = event.clientX - stage.offsetLeft,
+			y = event.clientY - stage.offsetTop;
+			
+			// We begin out line
+			ctx.beginPath();
+			ctx.moveTo(x, y);
+			
+		stage.onmouseup = function(event2){
+			x2 = event2.clientX - stage.offsetLeft,
+			y2 = event2.clientY - stage.offsetTop;
+			
+			// We complete our line
+			ctx.lineTo(x2, y2);
+			ctx.strokeStyle = color;
+			ctx.lineWidth = width;
+			ctx.stroke();
+		}
+	}
+	
+	// Here we clear the stage
+	var clear = document.getElementById('clear');
+	clear.onclick = function(){
+		stage.width = stage.width;
+	}
+});
+</script>
+</head>
+<body>
+<canvas id="stage" width="800" height="600"></canvas>
+<div id="line">Line: <span id="whatColor">?</span> <span id="whatWidth">?</span></div>
+<button class="button" id="clear" type="button">Clear Stage</button> | 
+<button class="button color" data-color="red" type="button">Red Line</button>
+<button class="button color" data-color="green" type="button">Green Line</button>
+<button class="button color" data-color="blue" type="button">Blue Line</button>
+<button class="button color" data-color="black" type="button">Black Line</button> | 
+<button class="button width" data-width="1" type="button">1px Line</button>
+<button class="button width" data-width="2" type="button">2px Line</button>
+<button class="button width" data-width="3" type="button">3px Line</button>
+<button class="button width" data-width="5" type="button">5px Line</button>
+</body>
+</html>
