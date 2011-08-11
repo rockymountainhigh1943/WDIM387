@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8" />
+	<title>CuteType - Chatathon</title>
+	<script type="text/javascript" src="jquery.min.js"></script>
+	<link rel="stylesheet" type="text/css" href="style.css" />
+	<script>
+	$(function(){
+		var ct = {}; // Setup our wrapper object & main function
+		
+		// Handle the username
+		$('#getIt').submit(function(e){
+			e.preventDefault();
+			var theUser = $('#user').val(); // Grab the set username
+			var theToken = $('#token').val(); // Grab the set token
+			
+			if( theToken === "57fc6f26322dbf9712a4d9b6b0d082f29c3490c859287a4136f09664" ) {
+			
+				$('#getIt').fadeOut(500, function(){
+					$('#gameOn').fadeIn(500, function(){
+						
+						ct.get = function(url, data){
+							return $.getJSON("http://cutetypo.com" + url + "?callback=?&token=" + theToken, data);
+						};
+					
+						// We run the get function
+						ct.get('/message/get')
+							.then( function(data) { 
+								$.each(data, function(i, item){
+									$('<div class="single" />').html('<strong>' + item['username'] + '</strong>: ' + item['message']).appendTo('#messages');
+								});
+							});
+							
+						// We set the update interval
+						setInterval(function() { ct.get("/message/get").then( function(data) {
+								$('#messages').html(' ');
+								$.each(data, function(i, item){
+									$('<div class="single" />').html('<strong>' + item['username'] + '</strong>: ' + item['message']).appendTo('#messages');
+								});
+							}) }, 1000);
+							
+						// We send the message
+						$('#sendIt').submit(function(e){
+							e.preventDefault();
+							var note = $('#send').val();
+							ct.get('/message/send', {message: note, username: theUser});
+							$('#send').val('');
+						});
+						
+					});
+				});
+			} else { alert('Imagine Samual Jackson saying "Nah nah nah. Not until you say the magic words."'); }
+		});
+		
+
+		
+		// Login field fun
+		$('.clearThis').click(function(){
+			$(this).val('');
+		});
+		
+		$('.clearThis.token').focusout(function(){
+			if(! $(this).val() ){
+				$(this).val('Enter Token Here');
+			}
+		});
+		
+		$('.clearThis.user').focusout(function(){
+			if(! $(this).val() ){
+				$(this).val('Enter Your Username');
+			}
+		});
+		
+	});
+	</script>
+</head>
+<body>
+	<form id="getIt">
+		<input type="text" name="token" id="token" size="65" value="Enter Token Here" class="clearThis token" />
+		<input type="text" name="user" id="user" value="Enter Your Username" class="clearThis user" />
+		<input type="submit" id="clickThis" value="!" />
+	</form>
+	<div id="gameOn">
+		<div id="messages">
+		</div>
+		<form id="sendIt">
+			<textarea cols="30" rows="10" id="send"></textarea><br />
+			<input type="submit" id="clickMe" value="Send it!" />
+		</form>
+	</div>
+</body>
+</html>
